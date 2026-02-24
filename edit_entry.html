@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>記帳編輯介面 - 完美選單版</title>
+    <style>
+      :root {
+        --bg-color: #f0f2f5;
+        --card-bg: #ffffff;
+        --primary-green: #2ecc71;
+        --primary-red: #ef4444;
+        --text-main: #333;
+        --text-secondary: #666;
+        --border-radius: 12px;
+        --spacing: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        display: flex;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .app-container {
+        width: 100%;
+        max-width: 400px;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing);
+      }
+
+      /* 通用卡片 */
+      .card {
+        background: var(--card-bg);
+        border-radius: var(--border-radius);
+        padding: var(--spacing);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        /* overflow: hidden; 移除，否則自定義選單會被切掉 */
+        position: relative; /* 為了定位選單 */
+      }
+
+      .card.compact {
+        padding: 0 var(--spacing);
+      }
+
+      .form-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 0;
+        min-height: 56px;
+        position: relative; /* 為了定位下拉選單 */
+      }
+
+      .form-row:not(:last-child) {
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .label {
+        color: var(--text-secondary);
+        font-size: 15px;
+        font-weight: 500;
+      }
+
+      /* --- 自定義帳本選單 (Custom Dropdown) --- */
+      .custom-select-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        color: var(--text-main);
+        font-size: 15px;
+      }
+
+      .selected-value {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: #666;
+      }
+
+      /* 下拉選單本體 */
+      .custom-options {
+        position: absolute;
+        top: 100%; /* 在按鈕正下方 */
+        right: 0; /* 靠右對齊 */
+        background: white;
+        border-radius: 8px; /* 圓滑一點 */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 5px;
+        display: none; /* 預設隱藏 */
+        z-index: 100;
+        min-width: 120px;
+        overflow: hidden;
+        border: 1px solid #eee;
+      }
+
+      .custom-options.show {
+        display: block;
+      }
+
+      .custom-option {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-radius: 6px; /* 選項也有小圓角 */
+        transition: background 0.2s;
+        color: #333;
+        text-align: left;
+      }
+
+      /* 滑鼠指到的效果：綠底白字 */
+      .custom-option:hover {
+        background-color: var(--primary-green);
+        color: white;
+      }
+
+      /* 選中的項目 */
+      .custom-option.selected {
+        font-weight: bold;
+        color: var(--primary-green);
+      }
+      .custom-option.selected:hover {
+        color: white;
+      }
+
+      /* 切換按鈕 (支出/收入) */
+      .toggle-group {
+        display: flex;
+        gap: 8px;
+        background: #eee;
+        padding: 2px;
+        border-radius: 8px;
+      }
+
+      .toggle-btn {
+        border: none;
+        padding: 6px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: transparent;
+        color: #666;
+      }
+
+      .toggle-btn.active {
+        background-color: var(--primary-green);
+        color: white;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+
+      /* 金額顯示與編輯區 */
+      .amount-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 5px;
+        font-size: 18px;
+        color: var(--text-main);
+      }
+
+      .currency-tag {
+        background: #f0f2f5;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 14px;
+        color: #666;
+      }
+
+      .amount-input {
+        width: 100px;
+        padding: 5px;
+        font-size: 18px;
+        border: 1px solid var(--primary-green);
+        border-radius: 4px;
+        outline: none;
+        text-align: right;
+      }
+
+      /* 互動顯示區 (日期、類別) */
+      .interactive-display {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        color: var(--text-main);
+      }
+
+      /* 備註輸入框 */
+      .note-input-v1 {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        font-size: 16px;
+        width: 100%;
+        outline: none;
+        margin-top: 8px;
+      }
+
+      .note-input-v1:focus {
+        border-color: var(--primary-green);
+      }
+
+      /* 按鈕區域 */
+      .btn {
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: var(--border-radius);
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn-update {
+        background-color: var(--primary-green);
+        color: white;
+      }
+      .btn-update:active {
+        opacity: 0.9;
+      }
+
+      .btn-delete {
+        background-color: var(--primary-red);
+        color: white;
+        margin-top: 10px;
+      }
+
+      .footer-text {
+        text-align: center;
+        font-size: 12px;
+        color: #999;
+        margin-top: 10px;
+      }
+
+      .icon {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+      }
+      .edit-icon {
+        cursor: pointer;
+        color: #999;
+        margin-left: 5px;
+      }
+
+      .rotate-arrow {
+        transition: transform 0.3s;
+      }
+      .rotate-arrow.open {
+        transform: rotate(180deg);
+      }
+
+      /* --- 下拉容器通用樣式 (日曆 & 類別) --- */
+      .dropdown-container {
+        display: none;
+        padding-bottom: 20px;
+        background: #fafafa;
+        border-top: 1px solid #eee;
+        margin: 0 -16px;
+        padding: 10px 16px 20px 16px;
+      }
+
+      /* --- 類別選單樣式 --- */
+      .category-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        padding-top: 10px;
+      }
+
+      .category-btn {
+        background-color: #e4e6eb;
+        border: none;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 15px;
+        color: #333;
+        cursor: pointer;
+        text-align: center;
+      }
+
+      .category-btn:active,
+      .category-btn.selected {
+        background-color: #d0d2d6;
+        font-weight: 600;
+      }
+
+      /* --- 日曆樣式 --- */
+      .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding: 0 10px;
+      }
+      .calendar-nav-btn {
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        color: #666;
+        padding: 5px;
+      }
+      .calendar-selectors {
+        display: flex;
+        gap: 10px;
+      }
+      .cal-select {
+        border: 1px solid #ddd;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: white;
+        font-size: 14px;
+      }
+      .calendar-grid-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        gap: 8px;
+      }
+      .weekday {
+        font-size: 13px;
+        color: #999;
+        margin-bottom: 5px;
+      }
+      .day {
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        border-radius: 50%;
+        cursor: pointer;
+        color: #333;
+      }
+      .day:nth-child(7n),
+      .day:nth-child(7n + 1) {
+        color: var(--primary-green);
+        font-weight: 500;
+      }
+      .day.selected {
+        background-color: var(--primary-green);
+        color: white !important;
+        box-shadow: 0 2px 5px rgba(46, 204, 113, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <div class="card compact">
+        <div class="form-row">
+          <span class="label">帳本</span>
+          <div class="custom-select-wrapper" onclick="toggleLedgerOptions()">
+            <div class="selected-value">
+              <span id="ledger-text">預設帳本</span>
+              <svg
+                class="icon rotate-arrow"
+                id="ledger-arrow"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"
+                />
+              </svg>
+            </div>
+
+            <div class="custom-options" id="ledger-options">
+              <div
+                class="custom-option selected"
+                onclick="selectLedger('預設帳本', this)"
+              >
+                預設帳本
+              </div>
+              <div
+                class="custom-option"
+                onclick="selectLedger('公司帳本', this)"
+              >
+                公司帳本
+              </div>
+              <div
+                class="custom-option"
+                onclick="selectLedger('私人帳本', this)"
+              >
+                私人帳本
+              </div>
+              <div
+                class="custom-option"
+                onclick="selectLedger('旅遊基金', this)"
+              >
+                旅遊基金
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card compact">
+        <div class="form-row">
+          <span class="label">屬性</span>
+          <div class="toggle-group">
+            <button
+              class="toggle-btn active"
+              id="btn-expense"
+              onclick="setType('expense')"
+            >
+              支出
+            </button>
+            <button
+              class="toggle-btn"
+              id="btn-income"
+              onclick="setType('income')"
+            >
+              收入
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="form-row"
+          onclick="toggleCategory()"
+          style="cursor: pointer"
+        >
+          <span class="label">類型</span>
+          <div class="interactive-display">
+            <span id="category-display-text">請選擇類別</span>
+            <svg
+              class="icon rotate-arrow"
+              id="category-arrow"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div class="dropdown-container" id="category-wrapper">
+          <div class="category-grid" id="category-list"></div>
+        </div>
+      </div>
+
+      <div class="card compact">
+        <div class="form-row">
+          <span class="label">金額</span>
+          <div class="amount-wrapper">
+            <span id="minus-sign" style="margin-right: 2px">-</span>
+            <div class="currency-tag">NT$ ⌵</div>
+            <span id="amount-text" onclick="toggleAmountEdit()">100</span>
+            <input
+              type="number"
+              id="amount-input"
+              class="amount-input"
+              style="display: none"
+              onblur="saveAmount()"
+              onkeydown="handleEnter(event)"
+            />
+            <svg
+              class="icon edit-icon"
+              id="edit-btn"
+              onclick="toggleAmountEdit()"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div
+          class="form-row"
+          onclick="toggleCalendar()"
+          style="cursor: pointer"
+        >
+          <span class="label">日期</span>
+          <div class="interactive-display">
+            <span id="current-date-text">2025年11月09日</span>
+            <svg class="icon rotate-arrow" id="date-arrow" viewBox="0 0 24 24">
+              <path
+                d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div class="dropdown-container" id="calendar-wrapper">
+          <div class="calendar-header">
+            <button class="calendar-nav-btn" onclick="changeMonth(-1)">
+              ‹
+            </button>
+            <div class="calendar-selectors">
+              <select
+                class="cal-select"
+                id="cal-year"
+                onchange="renderCalendar()"
+              ></select>
+              <select
+                class="cal-select"
+                id="cal-month"
+                onchange="renderCalendar()"
+              ></select>
+            </div>
+            <button class="calendar-nav-btn" onclick="changeMonth(1)">›</button>
+          </div>
+          <div class="calendar-grid-days">
+            <div class="weekday">日</div>
+            <div class="weekday">一</div>
+            <div class="weekday">二</div>
+            <div class="weekday">三</div>
+            <div class="weekday">四</div>
+            <div class="weekday">五</div>
+            <div class="weekday">六</div>
+          </div>
+          <div class="calendar-grid-days" id="calendar-days"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div><span class="label">備註</span></div>
+        <input
+          type="text"
+          class="note-input-v1"
+          value="晚餐"
+          placeholder="輸入備註"
+        />
+      </div>
+
+      <div>
+        <button class="btn btn-update" onclick="updateEntry()">更新</button>
+        <button class="btn btn-delete" onclick="deleteEntry()">
+          <svg class="icon" viewBox="0 0 24 24" style="margin-right: 4px">
+            <path
+              d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+            />
+          </svg>
+          刪除
+        </button>
+        <div class="footer-text">最後更新 2025年11月09日 晚上11:40</div>
+      </div>
+    </div>
+
+    <script>
+      // --- 帳本下拉選單邏輯 (New) ---
+      function toggleLedgerOptions() {
+        const options = document.getElementById("ledger-options");
+        const arrow = document.getElementById("ledger-arrow");
+        options.classList.toggle("show");
+
+        if (options.classList.contains("show")) {
+          arrow.classList.add("open");
+        } else {
+          arrow.classList.remove("open");
+        }
+      }
+
+      function selectLedger(value, el) {
+        document.getElementById("ledger-text").innerText = value;
+
+        // 處理選中狀態
+        document
+          .querySelectorAll(".custom-option")
+          .forEach((opt) => opt.classList.remove("selected"));
+        el.classList.add("selected");
+
+        // 阻止冒泡，避免再次觸發 toggle
+        event.stopPropagation();
+
+        // 關閉選單
+        document.getElementById("ledger-options").classList.remove("show");
+        document.getElementById("ledger-arrow").classList.remove("open");
+      }
+
+      // 點擊空白處關閉帳本選單
+      window.onclick = function (event) {
+        if (
+          !event.target.matches(".custom-select-wrapper") &&
+          !event.target.closest(".custom-select-wrapper")
+        ) {
+          document.getElementById("ledger-options").classList.remove("show");
+          document.getElementById("ledger-arrow").classList.remove("open");
+        }
+      };
+
+      // --- 以下為舊有邏輯，保持不變 ---
+      const expenseCategories = [
+        "房租",
+        "水電",
+        "交通",
+        "購物",
+        "運動",
+        "醫療",
+        "電話",
+        "訂閱",
+        "餐飲",
+        "娛樂",
+        "旅行",
+        "其他",
+      ];
+      const incomeCategories = [
+        "薪水",
+        "投資",
+        "回饋",
+        "租金",
+        "其他",
+        "獎金",
+        "交易",
+        "股利",
+        "紅包",
+      ];
+      let currentType = "expense";
+      let selectedDate = new Date(2025, 10, 9);
+
+      document.addEventListener("DOMContentLoaded", () => {
+        initCalendarSelects();
+        renderCalendar();
+        renderCategories();
+        document.getElementById("category-display-text").innerText =
+          expenseCategories[8];
+      });
+
+      function setType(type) {
+        const btnExpense = document.getElementById("btn-expense");
+        const btnIncome = document.getElementById("btn-income");
+        const minusSign = document.getElementById("minus-sign");
+        currentType = type;
+        if (type === "expense") {
+          btnExpense.classList.add("active");
+          btnIncome.classList.remove("active");
+          minusSign.style.display = "inline";
+        } else {
+          btnIncome.classList.add("active");
+          btnExpense.classList.remove("active");
+          minusSign.style.display = "none";
+        }
+        renderCategories();
+        document.getElementById("category-display-text").innerText =
+          "請選擇類別";
+      }
+
+      function toggleCategory() {
+        const catWrapper = document.getElementById("category-wrapper");
+        const arrow = document.getElementById("category-arrow");
+        document.getElementById("calendar-wrapper").style.display = "none";
+        document.getElementById("date-arrow").classList.remove("open");
+        if (catWrapper.style.display === "block") {
+          catWrapper.style.display = "none";
+          arrow.classList.remove("open");
+        } else {
+          catWrapper.style.display = "block";
+          arrow.classList.add("open");
+        }
+      }
+
+      function renderCategories() {
+        const listContainer = document.getElementById("category-list");
+        listContainer.innerHTML = "";
+        const categories =
+          currentType === "expense" ? expenseCategories : incomeCategories;
+        categories.forEach((cat) => {
+          const btn = document.createElement("button");
+          btn.className = "category-btn";
+          btn.innerText = cat;
+          btn.onclick = () => {
+            document.getElementById("category-display-text").innerText = cat;
+            toggleCategory();
+          };
+          listContainer.appendChild(btn);
+        });
+      }
+
+      function toggleAmountEdit() {
+        const textDisplay = document.getElementById("amount-text");
+        const inputDisplay = document.getElementById("amount-input");
+        const editBtn = document.getElementById("edit-btn");
+        if (inputDisplay.style.display === "none") {
+          inputDisplay.style.display = "block";
+          inputDisplay.value = textDisplay.innerText;
+          textDisplay.style.display = "none";
+          editBtn.style.color = "#2ecc71";
+          inputDisplay.focus();
+        } else {
+          saveAmount();
+        }
+      }
+
+      function saveAmount() {
+        const textDisplay = document.getElementById("amount-text");
+        const inputDisplay = document.getElementById("amount-input");
+        const editBtn = document.getElementById("edit-btn");
+        if (inputDisplay.value.trim() !== "")
+          textDisplay.innerText = inputDisplay.value;
+        inputDisplay.style.display = "none";
+        textDisplay.style.display = "inline";
+        editBtn.style.color = "#999";
+      }
+      function handleEnter(e) {
+        if (e.key === "Enter") saveAmount();
+      }
+
+      function toggleCalendar() {
+        const calWrapper = document.getElementById("calendar-wrapper");
+        const arrow = document.getElementById("date-arrow");
+        document.getElementById("category-wrapper").style.display = "none";
+        document.getElementById("category-arrow").classList.remove("open");
+        if (calWrapper.style.display === "block") {
+          calWrapper.style.display = "none";
+          arrow.classList.remove("open");
+        } else {
+          calWrapper.style.display = "block";
+          arrow.classList.add("open");
+        }
+      }
+
+      function initCalendarSelects() {
+        const yearSelect = document.getElementById("cal-year");
+        const monthSelect = document.getElementById("cal-month");
+        const currentYear = selectedDate.getFullYear();
+        for (let y = currentYear - 5; y <= currentYear + 5; y++)
+          yearSelect.add(new Option(y + "年", y));
+        for (let m = 0; m < 12; m++)
+          monthSelect.add(new Option(m + 1 + "月", m));
+      }
+
+      function renderCalendar() {
+        const yearSelect = document.getElementById("cal-year");
+        const monthSelect = document.getElementById("cal-month");
+        if (!yearSelect.value) yearSelect.value = selectedDate.getFullYear();
+        if (!monthSelect.value) monthSelect.value = selectedDate.getMonth();
+        const year = parseInt(yearSelect.value);
+        const month = parseInt(monthSelect.value);
+        const daysContainer = document.getElementById("calendar-days");
+        daysContainer.innerHTML = "";
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        for (let i = 0; i < firstDay.getDay(); i++)
+          daysContainer.appendChild(document.createElement("div"));
+        for (let d = 1; d <= lastDay.getDate(); d++) {
+          const dayEl = document.createElement("div");
+          dayEl.className = "day";
+          dayEl.innerText = d;
+          if (
+            d === selectedDate.getDate() &&
+            month === selectedDate.getMonth() &&
+            year === selectedDate.getFullYear()
+          )
+            dayEl.classList.add("selected");
+          dayEl.onclick = (e) => {
+            e.stopPropagation();
+            selectedDate = new Date(year, month, d);
+            document.getElementById("current-date-text").innerText =
+              `${year}年${String(month + 1).padStart(2, "0")}月${String(d).padStart(2, "0")}日`;
+            renderCalendar();
+            toggleCalendar();
+          };
+          daysContainer.appendChild(dayEl);
+        }
+      }
+
+      function changeMonth(offset) {
+        const monthSelect = document.getElementById("cal-month");
+        const yearSelect = document.getElementById("cal-year");
+        let m = parseInt(monthSelect.value) + offset;
+        let y = parseInt(yearSelect.value);
+        if (m > 11) {
+          m = 0;
+          y++;
+        }
+        if (m < 0) {
+          m = 11;
+          y--;
+        }
+        monthSelect.value = m;
+        yearSelect.value = y;
+        renderCalendar();
+      }
+
+      function updateEntry() {
+        const btn = document.querySelector(".btn-update");
+        const originalText = btn.innerText;
+        btn.innerText = "更新中...";
+        setTimeout(() => {
+          btn.innerText = "更新成功！";
+          setTimeout(() => {
+            btn.innerText = originalText;
+          }, 1000);
+        }, 500);
+      }
+
+      function deleteEntry() {
+        if (confirm("確定要刪除這筆紀錄嗎？")) {
+          document.querySelector(".app-container").style.opacity = "0.5";
+          alert("已刪除");
+        }
+      }
+    </script>
+  </body>
+</html>
