@@ -286,8 +286,8 @@ async function main() {
       return;
     }
     data = await res.json();
-    // records = data.records; // 假設 API 回傳的 JSON 裡有個 records 陣列
-    console.log("Fetched data:", data);
+    records = data.records; // 假設 API 回傳的 JSON 裡有個 records 陣列
+    console.log("Fetched data:", records);
   } catch (err) {
     console.error(err);
   }
@@ -295,3 +295,4 @@ async function main() {
 
 main();
 // loadData();
+
