@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>記帳編輯介面 - 完美選單版</title>
+    <title>記帳編輯介面 - 新增項目欄位</title>
     <style>
       :root {
         --bg-color: #f0f2f5;
@@ -48,8 +48,7 @@
         border-radius: var(--border-radius);
         padding: var(--spacing);
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        /* overflow: hidden; 移除，否則自定義選單會被切掉 */
-        position: relative; /* 為了定位選單 */
+        position: relative;
       }
 
       .card.compact {
@@ -62,7 +61,7 @@
         align-items: center;
         padding: 16px 0;
         min-height: 56px;
-        position: relative; /* 為了定位下拉選單 */
+        position: relative;
       }
 
       .form-row:not(:last-child) {
@@ -75,7 +74,7 @@
         font-weight: 500;
       }
 
-      /* --- 自定義帳本選單 (Custom Dropdown) --- */
+      /* --- 自定義帳本選單 --- */
       .custom-select-wrapper {
         position: relative;
         display: flex;
@@ -92,16 +91,15 @@
         color: #666;
       }
 
-      /* 下拉選單本體 */
       .custom-options {
         position: absolute;
-        top: 100%; /* 在按鈕正下方 */
-        right: 0; /* 靠右對齊 */
+        top: 100%;
+        right: 0;
         background: white;
-        border-radius: 8px; /* 圓滑一點 */
+        border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         padding: 5px;
-        display: none; /* 預設隱藏 */
+        display: none;
         z-index: 100;
         min-width: 120px;
         overflow: hidden;
@@ -115,19 +113,17 @@
       .custom-option {
         padding: 8px 12px;
         cursor: pointer;
-        border-radius: 6px; /* 選項也有小圓角 */
+        border-radius: 6px;
         transition: background 0.2s;
         color: #333;
         text-align: left;
       }
 
-      /* 滑鼠指到的效果：綠底白字 */
       .custom-option:hover {
         background-color: var(--primary-green);
         color: white;
       }
 
-      /* 選中的項目 */
       .custom-option.selected {
         font-weight: bold;
         color: var(--primary-green);
@@ -136,7 +132,7 @@
         color: white;
       }
 
-      /* 切換按鈕 (支出/收入) */
+      /* 切換按鈕 */
       .toggle-group {
         display: flex;
         gap: 8px;
@@ -190,7 +186,7 @@
         text-align: right;
       }
 
-      /* 互動顯示區 (日期、類別) */
+      /* 互動顯示區 */
       .interactive-display {
         display: flex;
         align-items: center;
@@ -199,8 +195,8 @@
         color: var(--text-main);
       }
 
-      /* 備註輸入框 */
-      .note-input-v1 {
+      /* 文字輸入框 (項目與備註共用) */
+      .text-input-box {
         border: 1px solid #ddd;
         border-radius: 8px;
         padding: 10px;
@@ -210,7 +206,7 @@
         margin-top: 8px;
       }
 
-      .note-input-v1:focus {
+      .text-input-box:focus {
         border-color: var(--primary-green);
       }
 
@@ -268,7 +264,7 @@
         transform: rotate(180deg);
       }
 
-      /* --- 下拉容器通用樣式 (日曆 & 類別) --- */
+      /* 下拉容器通用樣式 */
       .dropdown-container {
         display: none;
         padding-bottom: 20px;
@@ -278,7 +274,7 @@
         padding: 10px 16px 20px 16px;
       }
 
-      /* --- 類別選單樣式 --- */
+      /* 類別選單樣式 */
       .category-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -303,7 +299,7 @@
         font-weight: 600;
       }
 
-      /* --- 日曆樣式 --- */
+      /* 日曆樣式 */
       .calendar-header {
         display: flex;
         justify-content: space-between;
@@ -381,7 +377,6 @@
                 />
               </svg>
             </div>
-
             <div class="custom-options" id="ledger-options">
               <div
                 class="custom-option selected"
@@ -535,10 +530,22 @@
       </div>
 
       <div class="card">
+        <div><span class="label">項目</span></div>
+        <input
+          type="text"
+          id="item-input"
+          class="text-input-box"
+          value="便當"
+          placeholder="輸入項目名稱"
+        />
+      </div>
+
+      <div class="card">
         <div><span class="label">備註</span></div>
         <input
           type="text"
-          class="note-input-v1"
+          id="note-input"
+          class="text-input-box"
           value="晚餐"
           placeholder="輸入備註"
         />

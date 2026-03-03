@@ -16,22 +16,15 @@ function toggleLedgerOptions() {
 
 function selectLedger(value, el) {
   document.getElementById("ledger-text").innerText = value;
-
-  // 處理選中狀態
   document
     .querySelectorAll(".custom-option")
     .forEach((opt) => opt.classList.remove("selected"));
   el.classList.add("selected");
-
-  // 阻止冒泡，避免再次觸發 toggle
   event.stopPropagation();
-
-  // 關閉選單
   document.getElementById("ledger-options").classList.remove("show");
   document.getElementById("ledger-arrow").classList.remove("open");
 }
 
-// 點擊空白處關閉帳本選單
 window.onclick = function (event) {
   if (
     !event.target.matches(".custom-select-wrapper") &&
@@ -42,7 +35,7 @@ window.onclick = function (event) {
   }
 };
 
-// --- 以下為舊有邏輯，保持不變 ---
+// --- 類別與基本邏輯 ---
 const expenseCategories = [
   "房租",
   "水電",
@@ -286,8 +279,8 @@ async function main() {
       return;
     }
     data = await res.json();
-    records = data.records; // 假設 API 回傳的 JSON 裡有個 records 陣列
-    console.log("Fetched data:", records);
+    // records = data.records; // 假設 API 回傳的 JSON 裡有個 records 陣列
+    console.log("Fetched data:", data);
   } catch (err) {
     console.error(err);
   }
@@ -295,4 +288,3 @@ async function main() {
 
 main();
 // loadData();
-
