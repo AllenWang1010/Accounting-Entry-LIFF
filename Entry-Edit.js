@@ -252,7 +252,41 @@ function deleteEntry() {
 // ---- 資料寫入介面邏輯 (新增) ----
 function populateData(apiData) {
   // 防呆：確認有資料
-  if (!apiData || !apiData.records || apiData.records.length === 0) return;
+  if (!apiData) return;
+
+  // 0. 帳本選單 (sheetList & sheetName)
+  if (apiData.sheetName) {
+    document.getElementById("ledger-text").innerText = apiData.sheetName;
+  }
+
+  if (apiData.sheetList && Array.isArray(apiData.sheetList)) {
+    const ledgerOptionsContainer = document.getElementById("ledger-options");
+    if (ledgerOptionsContainer) {
+      ledgerOptionsContainer.innerHTML = ""; // 清空 HTML 中寫死的選項
+
+      apiData.sheetList.forEach((sheet) => {
+        const optionDiv = document.createElement("div");
+        optionDiv.className = "custom-option";
+
+        // 若為預設選項，加上 selected 標記
+        if (sheet === apiData.sheetName) {
+          optionDiv.classList.add("selected");
+        }
+
+        optionDiv.innerText = sheet;
+
+        // 綁定點擊事件
+        optionDiv.onclick = function () {
+          selectLedger(sheet, this);
+        };
+
+        ledgerOptionsContainer.appendChild(optionDiv);
+      });
+    }
+  }
+
+  // 確認有 records 資料再繼續渲染下方欄位
+  if (!apiData.records || apiData.records.length === 0) return;
 
   const record = apiData.records[0];
 
