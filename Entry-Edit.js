@@ -281,6 +281,7 @@ async function main() {
     data = await res.json();
     // records = data.records; // 假設 API 回傳的 JSON 裡有個 records 陣列
     console.log("Fetched data:", data);
+    console.log(data[0].ITEM)
   } catch (err) {
     console.error(err);
   }
@@ -288,4 +289,5 @@ async function main() {
 
 main();
 // loadData();
+
 
