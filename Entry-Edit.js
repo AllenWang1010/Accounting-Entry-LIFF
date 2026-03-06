@@ -273,7 +273,7 @@ async function updateEntry() {
   // 3. 發送 POST 請求給 n8n
   // 請將以下網址換成您 n8n 更新用的 Webhook URL
   const updateApiUrl =
-    "https://dalene-phylar-ruttily.ngrok-free.dev/webhook-test/Update-Entry";
+    "https://dalene-phylar-ruttily.ngrok-free.dev/webhook/Update-Entry";
 
   try {
     const response = await fetch(updateApiUrl, {
