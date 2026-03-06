@@ -3,7 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>記帳編輯介面 - 新增項目欄位</title>
+    <title>記帳編輯介面 - 隱藏 UserID 版</title>
+    <script
+      charset="utf-8"
+      src="https://static.line-scdn.net/liff/edge/2/sdk.js"
+    ></script>
+    <script src="./Entry-Edit.js"></script>
     <style>
       :root {
         --bg-color: #f0f2f5;
@@ -195,7 +200,7 @@
         color: var(--text-main);
       }
 
-      /* 文字輸入框 (項目與備註共用) */
+      /* 文字輸入框 */
       .text-input-box {
         border: 1px solid #ddd;
         border-radius: 8px;
@@ -377,32 +382,7 @@
                 />
               </svg>
             </div>
-            <div class="custom-options" id="ledger-options">
-              <div
-                class="custom-option selected"
-                onclick="selectLedger('預設帳本', this)"
-              >
-                預設帳本
-              </div>
-              <div
-                class="custom-option"
-                onclick="selectLedger('公司帳本', this)"
-              >
-                公司帳本
-              </div>
-              <div
-                class="custom-option"
-                onclick="selectLedger('私人帳本', this)"
-              >
-                私人帳本
-              </div>
-              <div
-                class="custom-option"
-                onclick="selectLedger('旅遊基金', this)"
-              >
-                旅遊基金
-              </div>
-            </div>
+            <div class="custom-options" id="ledger-options"></div>
           </div>
         </div>
       </div>
@@ -459,7 +439,7 @@
           <div class="amount-wrapper">
             <span id="minus-sign" style="margin-right: 2px">-</span>
             <div class="currency-tag">NT$ ⌵</div>
-            <span id="amount-text" onclick="toggleAmountEdit()">100</span>
+            <span id="amount-text" onclick="toggleAmountEdit()">0</span>
             <input
               type="number"
               id="amount-input"
@@ -535,7 +515,6 @@
           type="text"
           id="item-input"
           class="text-input-box"
-          value="便當"
           placeholder="輸入項目名稱"
         />
       </div>
@@ -546,7 +525,6 @@
           type="text"
           id="note-input"
           class="text-input-box"
-          value="晚餐"
           placeholder="輸入備註"
         />
       </div>
@@ -561,11 +539,8 @@
           </svg>
           刪除
         </button>
-        <div class="footer-text">最後更新 2025年11月09日 晚上11:40</div>
+        <div class="footer-text" id="last-update-text">載入中...</div>
       </div>
     </div>
-    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
-    <script src="./Entry-Edit.js"></script>
   </body>
 </html>
