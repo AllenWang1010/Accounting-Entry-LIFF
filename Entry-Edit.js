@@ -232,8 +232,11 @@ function changeMonth(offset) {
   renderCalendar();
 }
 
+const actionApiUrl =
+  "https://dalene-phylar-ruttily.ngrok-free.dev/webhook/Update-Entry";
+
+// --- 1. 修改後的：更新資料 ---
 async function updateEntry() {
-  // 防呆檢查
   if (!currentRowNumber) {
     alert("無法獲取資料列號，請重新載入網頁！");
     return;
@@ -242,61 +245,46 @@ async function updateEntry() {
   const btn = document.querySelector(".btn-update");
   const originalText = btn.innerText;
   btn.innerText = "更新中...";
-  btn.disabled = true; // 避免重複點擊
+  btn.disabled = true;
 
-  // 1. 收集畫面上目前所有的值
   const sheetName = document.getElementById("ledger-text").innerText;
   const amount = document.getElementById("amount-text").innerText;
   const category = document.getElementById("category-display-text").innerText;
   const item = document.getElementById("item-input").value;
   const description = document.getElementById("note-input").value;
 
-  // 將選取的日期轉成 YYYY-MM-DD 格式
   const y = selectedDate.getFullYear();
   const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
   const d = String(selectedDate.getDate()).padStart(2, "0");
   const formattedDate = `${y}-${m}-${d}`;
 
-  // 2. 準備要傳送給 n8n 的 Payload (資料包)
   const payload = {
+    action: "update", // ★ 新增：告訴 n8n 這是更新動作 ★
     rowNumber: currentRowNumber,
     sheetName: sheetName,
-    type: currentType, // 'expense' 或 'income'
+    type: currentType,
     amount: amount,
     category: category,
     item: item,
     description: description,
     date: formattedDate,
-    originalTime: originalTime, // 傳回原本的時間以保留
+    originalTime: originalTime,
   };
 
-  // 3. 發送 POST 請求給 n8n
-  // 請將以下網址換成您 n8n 更新用的 Webhook URL
-  const updateApiUrl =
-    "https://dalene-phylar-ruttily.ngrok-free.dev/webhook/Update-Entry";
-
   try {
-    const response = await fetch(updateApiUrl, {
+    const response = await fetch(actionApiUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
     if (response.ok) {
       btn.innerText = "更新成功！";
-      // 成功後可以考慮關閉 LIFF 視窗
       setTimeout(() => {
-        if (liff.isInClient()) {
-          liff.closeWindow();
-        } else {
-          btn.innerText = originalText;
-          btn.disabled = false;
-        }
+        if (liff.isInClient()) liff.closeWindow();
       }, 1500);
     } else {
-      throw new Error(`伺服器錯誤: ${response.status}`);
+      throw new Error(`伺服器錯誤`);
     }
   } catch (error) {
     console.error("更新失敗:", error);
@@ -310,10 +298,55 @@ async function updateEntry() {
   }
 }
 
-function deleteEntry() {
-  if (confirm("確定要刪除這筆紀錄嗎？")) {
-    document.querySelector(".app-container").style.opacity = "0.5";
-    alert("已刪除");
+// --- 2. 修改後的：刪除資料 ---
+async function deleteEntry() {
+  if (!currentRowNumber) {
+    alert("無法獲取資料列號，請重新載入網頁！");
+    return;
+  }
+
+  // 加入確認對話框
+  if (!confirm("確定要刪除這筆紀錄嗎？此動作無法復原。")) {
+    return;
+  }
+
+  const btn = document.querySelector(".btn-delete");
+  const originalText = btn.innerHTML; // 因為裡面有 SVG，所以用 innerHTML
+  btn.innerText = "刪除中...";
+  btn.disabled = true;
+
+  const sheetName = document.getElementById("ledger-text").innerText;
+
+  const payload = {
+    action: "delete", // ★ 新增：告訴 n8n 這是刪除動作 ★
+    rowNumber: currentRowNumber,
+    sheetName: sheetName,
+    // 刪除只需要知道在哪個帳本、哪一列即可，不需要傳送其他內容
+  };
+
+  try {
+    const response = await fetch(actionApiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      btn.innerText = "已刪除！";
+      document.querySelector(".app-container").style.opacity = "0.5"; // 畫面變淡示意完成
+      setTimeout(() => {
+        if (liff.isInClient()) liff.closeWindow();
+      }, 1500);
+    } else {
+      throw new Error(`伺服器錯誤`);
+    }
+  } catch (error) {
+    console.error("刪除失敗:", error);
+    btn.innerText = "刪除失敗";
+    setTimeout(() => {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }, 2000);
   }
 }
 
