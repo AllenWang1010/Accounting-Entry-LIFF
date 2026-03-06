@@ -64,6 +64,8 @@ const incomeCategories = [
   "紅包",
 ];
 let currentType = "expense";
+let currentRowNumber = null; // 記憶目前編輯的是哪一列
+let originalTime = ""; // 記憶原本的時分秒
 let selectedDate = new Date(2025, 10, 9); // 預設值，之後會被 API 覆寫
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -230,16 +232,82 @@ function changeMonth(offset) {
   renderCalendar();
 }
 
-function updateEntry() {
+async function updateEntry() {
+  // 防呆檢查
+  if (!currentRowNumber) {
+    alert("無法獲取資料列號，請重新載入網頁！");
+    return;
+  }
+
   const btn = document.querySelector(".btn-update");
   const originalText = btn.innerText;
   btn.innerText = "更新中...";
-  setTimeout(() => {
-    btn.innerText = "更新成功！";
+  btn.disabled = true; // 避免重複點擊
+
+  // 1. 收集畫面上目前所有的值
+  const sheetName = document.getElementById("ledger-text").innerText;
+  const amount = document.getElementById("amount-text").innerText;
+  const category = document.getElementById("category-display-text").innerText;
+  const item = document.getElementById("item-input").value;
+  const description = document.getElementById("note-input").value;
+
+  // 將選取的日期轉成 YYYY-MM-DD 格式
+  const y = selectedDate.getFullYear();
+  const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
+  const d = String(selectedDate.getDate()).padStart(2, "0");
+  const formattedDate = `${y}-${m}-${d}`;
+
+  // 2. 準備要傳送給 n8n 的 Payload (資料包)
+  const payload = {
+    rowNumber: currentRowNumber,
+    sheetName: sheetName,
+    type: currentType, // 'expense' 或 'income'
+    amount: amount,
+    category: category,
+    item: item,
+    description: description,
+    date: formattedDate,
+    originalTime: originalTime, // 傳回原本的時間以保留
+  };
+
+  // 3. 發送 POST 請求給 n8n
+  // 請將以下網址換成您 n8n 更新用的 Webhook URL
+  const updateApiUrl =
+    "https://dalene-phylar-ruttily.ngrok-free.dev/webhook/Update-Entry";
+
+  try {
+    const response = await fetch(updateApiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      btn.innerText = "更新成功！";
+      // 成功後可以考慮關閉 LIFF 視窗
+      setTimeout(() => {
+        if (liff.isInClient()) {
+          liff.closeWindow();
+        } else {
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      }, 1500);
+    } else {
+      throw new Error(`伺服器錯誤: ${response.status}`);
+    }
+  } catch (error) {
+    console.error("更新失敗:", error);
+    btn.innerText = "更新失敗";
+    btn.style.backgroundColor = "var(--primary-red)";
     setTimeout(() => {
       btn.innerText = originalText;
-    }, 1000);
-  }, 500);
+      btn.style.backgroundColor = "var(--primary-green)";
+      btn.disabled = false;
+    }, 2000);
+  }
 }
 
 function deleteEntry() {
@@ -290,6 +358,11 @@ function populateData(apiData) {
 
   const record = apiData.records[0];
 
+  // ★ 新增這兩行：儲存列號與原始時間 ★
+  currentRowNumber = record.row_number;
+  if (record.TIMESTAMP && record.TIMESTAMP.includes(" ")) {
+    originalTime = record.TIMESTAMP.split(" ")[1]; // 取出 21:02:22 的部分
+  }
   // 1. 金額與屬性 (有負號為支出，無負號為收入)
   let rawPrice = String(record.PRICE || "0");
   if (rawPrice.includes("-")) {
