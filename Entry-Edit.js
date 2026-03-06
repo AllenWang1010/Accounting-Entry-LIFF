@@ -5,7 +5,7 @@ const liffId = "2008940948-79xDumdY";
 const fetchApiUrl =
   "https://dalene-phylar-ruttily.ngrok-free.dev/webhook/Entry-Edit";
 const actionApiUrl =
-  "https://dalene-phylar-ruttily.ngrok-free.dev/webhook/Entry-Action";
+  "https://dalene-phylar-ruttily.ngrok-free.dev/webhook-test/Update-Entry";
 
 // ★ 狀態記憶變數 (新增 currentUserId 用來在背景記住 UserID) ★
 let currentRowNumber = null;
@@ -461,3 +461,4 @@ async function deleteEntry() {
     }, 2000);
   }
 }
+
