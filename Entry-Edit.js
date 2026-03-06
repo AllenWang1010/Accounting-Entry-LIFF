@@ -271,8 +271,7 @@ function populateData(apiData) {
   currentRowNumber = record.row_number;
 
   // ★ 將 UserID 記憶在全域變數中，不顯示於畫面 ★
-  currentUserId =
-    record.USER_ID || record.UserID || record.userId || record.USERID || "";
+  currentUserId = apiData.UserID;
 
   // 1. 金額與屬性
   let rawPrice = String(record.PRICE || "0");
@@ -461,5 +460,3 @@ async function deleteEntry() {
     }, 2000);
   }
 }
-
-
