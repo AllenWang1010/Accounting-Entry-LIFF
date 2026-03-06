@@ -1,43 +1,20 @@
-// --- API 與 LIFF 設定 ---
-const liffId = "2008940948-79xDumdY"; // 在 LINE Developers 拿到後貼進來
-const apiUrl =
+// ==========================================
+//  全域變數與 API 設定
+// ==========================================
+const liffId = "2008940948-79xDumdY";
+const fetchApiUrl =
   "https://dalene-phylar-ruttily.ngrok-free.dev/webhook/Entry-Edit";
+const actionApiUrl =
+  "https://dalene-phylar-ruttily.ngrok-free.dev/webhook/Entry-Action";
 
-// --- 帳本選單邏輯 ---
-function toggleLedgerOptions() {
-  const options = document.getElementById("ledger-options");
-  const arrow = document.getElementById("ledger-arrow");
-  options.classList.toggle("show");
+// ★ 狀態記憶變數 (新增 currentUserId 用來在背景記住 UserID) ★
+let currentRowNumber = null;
+let originalTime = "";
+let currentUserId = "";
 
-  if (options.classList.contains("show")) {
-    arrow.classList.add("open");
-  } else {
-    arrow.classList.remove("open");
-  }
-}
-
-function selectLedger(value, el) {
-  document.getElementById("ledger-text").innerText = value;
-  document
-    .querySelectorAll(".custom-option")
-    .forEach((opt) => opt.classList.remove("selected"));
-  el.classList.add("selected");
-  event.stopPropagation(); // 阻止事件冒泡
-  document.getElementById("ledger-options").classList.remove("show");
-  document.getElementById("ledger-arrow").classList.remove("open");
-}
-
-window.onclick = function (event) {
-  if (
-    !event.target.matches(".custom-select-wrapper") &&
-    !event.target.closest(".custom-select-wrapper")
-  ) {
-    document.getElementById("ledger-options").classList.remove("show");
-    document.getElementById("ledger-arrow").classList.remove("open");
-  }
-};
-
-// --- 類別與基本邏輯 ---
+// ==========================================
+//  UI 互動與基本邏輯
+// ==========================================
 const expenseCategories = [
   "房租",
   "水電",
@@ -64,18 +41,47 @@ const incomeCategories = [
   "紅包",
 ];
 let currentType = "expense";
-let currentRowNumber = null; // 記憶目前編輯的是哪一列
-let originalTime = ""; // 記憶原本的時分秒
-let selectedDate = new Date(2025, 10, 9); // 預設值，之後會被 API 覆寫
+let selectedDate = new Date();
 
 document.addEventListener("DOMContentLoaded", () => {
   initCalendarSelects();
   renderCalendar();
   renderCategories();
-  // 網頁載入後啟動主流程
   main();
 });
 
+// --- 帳本選單邏輯 ---
+function toggleLedgerOptions() {
+  const options = document.getElementById("ledger-options");
+  const arrow = document.getElementById("ledger-arrow");
+  options.classList.toggle("show");
+  options.classList.contains("show")
+    ? arrow.classList.add("open")
+    : arrow.classList.remove("open");
+}
+function selectLedger(value, el) {
+  document.getElementById("ledger-text").innerText = value;
+  document
+    .querySelectorAll(".custom-option")
+    .forEach((opt) => opt.classList.remove("selected"));
+  el.classList.add("selected");
+  event.stopPropagation();
+  document.getElementById("ledger-options").classList.remove("show");
+  document.getElementById("ledger-arrow").classList.remove("open");
+}
+window.onclick = function (event) {
+  if (
+    !event.target.matches(".custom-select-wrapper") &&
+    !event.target.closest(".custom-select-wrapper")
+  ) {
+    const opts = document.getElementById("ledger-options");
+    if (opts) opts.classList.remove("show");
+    const arr = document.getElementById("ledger-arrow");
+    if (arr) arr.classList.remove("open");
+  }
+};
+
+// --- 屬性與類別切換 ---
 function setType(type) {
   const btnExpense = document.getElementById("btn-expense");
   const btnIncome = document.getElementById("btn-income");
@@ -124,7 +130,7 @@ function renderCategories() {
   });
 }
 
-// --- 金額編輯邏輯 ---
+// --- 金額編輯 ---
 function toggleAmountEdit() {
   const textDisplay = document.getElementById("amount-text");
   const inputDisplay = document.getElementById("amount-input");
@@ -139,7 +145,6 @@ function toggleAmountEdit() {
     saveAmount();
   }
 }
-
 function saveAmount() {
   const textDisplay = document.getElementById("amount-text");
   const inputDisplay = document.getElementById("amount-input");
@@ -150,12 +155,11 @@ function saveAmount() {
   textDisplay.style.display = "inline";
   editBtn.style.color = "#999";
 }
-
 function handleEnter(e) {
   if (e.key === "Enter") saveAmount();
 }
 
-// --- 日曆選單邏輯 ---
+// --- 日曆功能 ---
 function toggleCalendar() {
   const calWrapper = document.getElementById("calendar-wrapper");
   const arrow = document.getElementById("date-arrow");
@@ -213,7 +217,6 @@ function renderCalendar() {
     daysContainer.appendChild(dayEl);
   }
 }
-
 function changeMonth(offset) {
   const monthSelect = document.getElementById("cal-month");
   const yearSelect = document.getElementById("cal-year");
@@ -232,10 +235,122 @@ function changeMonth(offset) {
   renderCalendar();
 }
 
-const actionApiUrl =
-  "https://dalene-phylar-ruttily.ngrok-free.dev/webhook/Update-Entry";
+// ==========================================
+//  API 資料處理 (讀取、更新、刪除)
+// ==========================================
 
-// --- 1. 修改後的：更新資料 ---
+function populateData(apiData) {
+  if (!apiData) return;
+
+  // 0. 帳本選單
+  if (apiData.sheetName) {
+    document.getElementById("ledger-text").innerText = apiData.sheetName;
+  }
+
+  if (apiData.sheetList && Array.isArray(apiData.sheetList)) {
+    const ledgerOptionsContainer = document.getElementById("ledger-options");
+    if (ledgerOptionsContainer) {
+      ledgerOptionsContainer.innerHTML = "";
+      apiData.sheetList.forEach((sheet) => {
+        const optionDiv = document.createElement("div");
+        optionDiv.className = "custom-option";
+        if (sheet === apiData.sheetName) optionDiv.classList.add("selected");
+        optionDiv.innerText = sheet;
+        optionDiv.onclick = function () {
+          selectLedger(sheet, this);
+        };
+        ledgerOptionsContainer.appendChild(optionDiv);
+      });
+    }
+  }
+
+  if (!apiData.records || apiData.records.length === 0) return;
+  const record = apiData.records[0];
+
+  // 記憶資料列數
+  currentRowNumber = record.row_number;
+
+  // ★ 將 UserID 記憶在全域變數中，不顯示於畫面 ★
+  currentUserId =
+    record.USER_ID || record.UserID || record.userId || record.USERID || "";
+
+  // 1. 金額與屬性
+  let rawPrice = String(record.PRICE || "0");
+  if (rawPrice.includes("-")) {
+    setType("expense");
+    rawPrice = rawPrice.replace("-", "");
+  } else {
+    setType("income");
+  }
+  document.getElementById("amount-text").innerText = rawPrice;
+  document.getElementById("amount-input").value = rawPrice;
+
+  // 2. 類型
+  if (record.CATEGORY)
+    document.getElementById("category-display-text").innerText =
+      record.CATEGORY;
+
+  // 3. 項目
+  if (record.ITEM !== undefined)
+    document.getElementById("item-input").value = record.ITEM;
+
+  // 4. 備註
+  if (record.DESCRIPTION !== undefined)
+    document.getElementById("note-input").value = record.DESCRIPTION;
+
+  // 5. 日期與時間處理
+  if (record.TIMESTAMP) {
+    const parts = record.TIMESTAMP.split(" ");
+    const dateStr = parts[0];
+    if (parts.length > 1) {
+      originalTime = parts[1]; // 記憶原本的時分秒
+    }
+
+    const [y, m, d] = dateStr.split("-");
+    selectedDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    document.getElementById("current-date-text").innerText =
+      `${y}年${m}月${d}日`;
+    document.getElementById("last-update-text").innerText =
+      `最後更新 ${y}年${m}月${d}日`;
+
+    const yearSelect = document.getElementById("cal-year");
+    const monthSelect = document.getElementById("cal-month");
+    if (yearSelect) yearSelect.value = parseInt(y);
+    if (monthSelect) monthSelect.value = parseInt(m) - 1;
+    renderCalendar();
+  }
+}
+
+async function main() {
+  try {
+    await liff.init({ liffId });
+    if (!liff.isLoggedIn()) {
+      liff.login();
+      return;
+    }
+    const profile = await liff.getProfile();
+
+    // 讀取資料
+    const res = await fetch(fetchApiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: profile.userId, source: "liff-demo" }),
+    });
+
+    if (!res.ok) {
+      console.log(`API 錯誤: ${res.status}`);
+      return;
+    }
+
+    const data = await res.json();
+    console.log("Fetched data:", data);
+    populateData(data);
+  } catch (err) {
+    console.error("Initialization Error:", err);
+  }
+}
+
+// --- ★ 更新與回傳 ★ ---
 async function updateEntry() {
   if (!currentRowNumber) {
     alert("無法獲取資料列號，請重新載入網頁！");
@@ -259,9 +374,10 @@ async function updateEntry() {
   const formattedDate = `${y}-${m}-${d}`;
 
   const payload = {
-    action: "update", // ★ 新增：告訴 n8n 這是更新動作 ★
+    action: "update",
     rowNumber: currentRowNumber,
     sheetName: sheetName,
+    userId: currentUserId, // ★ 從背景變數讀取並回傳
     type: currentType,
     amount: amount,
     category: category,
@@ -298,30 +414,26 @@ async function updateEntry() {
   }
 }
 
-// --- 2. 修改後的：刪除資料 ---
+// --- ★ 刪除與回傳 ★ ---
 async function deleteEntry() {
   if (!currentRowNumber) {
     alert("無法獲取資料列號，請重新載入網頁！");
     return;
   }
-
-  // 加入確認對話框
-  if (!confirm("確定要刪除這筆紀錄嗎？此動作無法復原。")) {
-    return;
-  }
+  if (!confirm("確定要刪除這筆紀錄嗎？此動作無法復原。")) return;
 
   const btn = document.querySelector(".btn-delete");
-  const originalText = btn.innerHTML; // 因為裡面有 SVG，所以用 innerHTML
+  const originalText = btn.innerHTML;
   btn.innerText = "刪除中...";
   btn.disabled = true;
 
   const sheetName = document.getElementById("ledger-text").innerText;
 
   const payload = {
-    action: "delete", // ★ 新增：告訴 n8n 這是刪除動作 ★
+    action: "delete",
     rowNumber: currentRowNumber,
     sheetName: sheetName,
-    // 刪除只需要知道在哪個帳本、哪一列即可，不需要傳送其他內容
+    userId: currentUserId, // ★ 從背景變數讀取並回傳
   };
 
   try {
@@ -333,7 +445,7 @@ async function deleteEntry() {
 
     if (response.ok) {
       btn.innerText = "已刪除！";
-      document.querySelector(".app-container").style.opacity = "0.5"; // 畫面變淡示意完成
+      document.querySelector(".app-container").style.opacity = "0.5";
       setTimeout(() => {
         if (liff.isInClient()) liff.closeWindow();
       }, 1500);
@@ -347,144 +459,5 @@ async function deleteEntry() {
       btn.innerHTML = originalText;
       btn.disabled = false;
     }, 2000);
-  }
-}
-
-// ---- 資料寫入介面邏輯 (新增) ----
-function populateData(apiData) {
-  // 防呆：確認有資料
-  if (!apiData) return;
-
-  // 0. 帳本選單 (sheetList & sheetName)
-  if (apiData.sheetName) {
-    document.getElementById("ledger-text").innerText = apiData.sheetName;
-  }
-
-  if (apiData.sheetList && Array.isArray(apiData.sheetList)) {
-    const ledgerOptionsContainer = document.getElementById("ledger-options");
-    if (ledgerOptionsContainer) {
-      ledgerOptionsContainer.innerHTML = ""; // 清空 HTML 中寫死的選項
-
-      apiData.sheetList.forEach((sheet) => {
-        const optionDiv = document.createElement("div");
-        optionDiv.className = "custom-option";
-
-        // 若為預設選項，加上 selected 標記
-        if (sheet === apiData.sheetName) {
-          optionDiv.classList.add("selected");
-        }
-
-        optionDiv.innerText = sheet;
-
-        // 綁定點擊事件
-        optionDiv.onclick = function () {
-          selectLedger(sheet, this);
-        };
-
-        ledgerOptionsContainer.appendChild(optionDiv);
-      });
-    }
-  }
-
-  // 確認有 records 資料再繼續渲染下方欄位
-  if (!apiData.records || apiData.records.length === 0) return;
-
-  const record = apiData.records[0];
-
-  // ★ 新增這兩行：儲存列號與原始時間 ★
-  currentRowNumber = record.row_number;
-  if (record.TIMESTAMP && record.TIMESTAMP.includes(" ")) {
-    originalTime = record.TIMESTAMP.split(" ")[1]; // 取出 21:02:22 的部分
-  }
-  // 1. 金額與屬性 (有負號為支出，無負號為收入)
-  let rawPrice = String(record.PRICE || "0");
-  if (rawPrice.includes("-")) {
-    setType("expense");
-    rawPrice = rawPrice.replace("-", ""); // 移除數值上的負號，交給 UI 的減號顯示
-  } else {
-    setType("income");
-  }
-  document.getElementById("amount-text").innerText = rawPrice;
-  document.getElementById("amount-input").value = rawPrice;
-
-  // 2. 類型 (CATEGORY)
-  if (record.CATEGORY) {
-    document.getElementById("category-display-text").innerText =
-      record.CATEGORY;
-  }
-
-  // 3. 項目 (ITEM)
-  if (record.ITEM !== undefined) {
-    document.getElementById("item-input").value = record.ITEM;
-  }
-
-  // 4. 備註 (DESCRIPTION)
-  if (record.DESCRIPTION !== undefined) {
-    document.getElementById("note-input").value = record.DESCRIPTION;
-  }
-
-  // 5. 日期 (TIMESTAMP)
-  if (record.TIMESTAMP) {
-    // 切割 "2026-03-02 21:02:22" 取得 "2026-03-02"
-    const dateStr = record.TIMESTAMP.split(" ")[0];
-    const [y, m, d] = dateStr.split("-");
-
-    // 更新內部狀態
-    selectedDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-
-    // 更新畫面的文字
-    document.getElementById("current-date-text").innerText =
-      `${y}年${m}月${d}日`;
-
-    // 同步更新下拉月曆的選單值
-    const yearSelect = document.getElementById("cal-year");
-    const monthSelect = document.getElementById("cal-month");
-    if (yearSelect) yearSelect.value = parseInt(y);
-    if (monthSelect) monthSelect.value = parseInt(m) - 1;
-
-    // 重新繪製月曆讓高亮樣式落在正確日期
-    renderCalendar();
-  }
-}
-
-// ---- 資料載入與主流程 ----
-async function main() {
-  try {
-    // 初始化 LIFF
-    await liff.init({ liffId });
-
-    // 確保登入
-    if (!liff.isLoggedIn()) {
-      liff.login();
-      return;
-    }
-
-    // 取得使用者資訊
-    const profile = await liff.getProfile();
-
-    // 呼叫 n8n 的報表 API
-    const res = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId: profile.userId,
-        source: "liff-demo",
-      }),
-    });
-
-    if (!res.ok) {
-      console.log(`n8n API error: ${res.status} ${res.statusText}`);
-      return;
-    }
-
-    const data = await res.json();
-    console.log("Fetched data:", data);
-
-    // ★ 呼叫函式，將取得的資料填入 UI 介面 ★
-    populateData(data);
-  } catch (err) {
-    console.error("Initialization / Fetch Error:", err);
   }
 }
