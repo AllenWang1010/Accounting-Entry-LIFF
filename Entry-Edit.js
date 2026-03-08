@@ -15,7 +15,8 @@ let currentUserId = "";
 // ==========================================
 //  UI 互動與基本邏輯
 // ==========================================
-const expenseCategories = [
+// ★ 將 const 改為 let，允許從後端資料動態覆寫 ★
+let expenseCategories = [
   "房租",
   "水電",
   "交通",
@@ -29,7 +30,7 @@ const expenseCategories = [
   "旅行",
   "其他",
 ];
-const incomeCategories = [
+let incomeCategories = [
   "薪水",
   "投資",
   "回饋",
@@ -242,7 +243,17 @@ function changeMonth(offset) {
 function populateData(apiData) {
   if (!apiData) return;
 
-  // 0. 帳本選單
+  // ★ 1. 動態更新類別清單 ★
+  if (apiData.EXPENSE && Array.isArray(apiData.EXPENSE)) {
+    expenseCategories = apiData.EXPENSE;
+  }
+  if (apiData.INCOME && Array.isArray(apiData.INCOME)) {
+    incomeCategories = apiData.INCOME;
+  }
+  // 重新渲染類別清單，確保 UI 更新
+  renderCategories();
+
+  // 2. 帳本選單
   if (apiData.sheetName) {
     document.getElementById("ledger-text").innerText = apiData.sheetName;
   }
@@ -270,10 +281,16 @@ function populateData(apiData) {
   // 記憶資料列數
   currentRowNumber = record.row_number;
 
-  // ★ 將 UserID 記憶在全域變數中，不顯示於畫面 ★
-  currentUserId = apiData.UserID;
+  // 將 UserID 記憶在全域變數中，不顯示於畫面
+  currentUserId =
+    apiData.UserID ||
+    record.USER_ID ||
+    record.UserID ||
+    record.userId ||
+    record.USERID ||
+    "";
 
-  // 1. 金額與屬性
+  // 3. 金額與屬性
   let rawPrice = String(record.PRICE || "0");
   if (rawPrice.includes("-")) {
     setType("expense");
@@ -284,20 +301,20 @@ function populateData(apiData) {
   document.getElementById("amount-text").innerText = rawPrice;
   document.getElementById("amount-input").value = rawPrice;
 
-  // 2. 類型
+  // 4. 類型
   if (record.CATEGORY)
     document.getElementById("category-display-text").innerText =
       record.CATEGORY;
 
-  // 3. 項目
+  // 5. 項目
   if (record.ITEM !== undefined)
     document.getElementById("item-input").value = record.ITEM;
 
-  // 4. 備註
+  // 6. 備註
   if (record.DESCRIPTION !== undefined)
     document.getElementById("note-input").value = record.DESCRIPTION;
 
-  // 5. 日期與時間處理
+  // 7. 日期與時間處理
   if (record.TIMESTAMP) {
     const parts = record.TIMESTAMP.split(" ");
     const dateStr = parts[0];
